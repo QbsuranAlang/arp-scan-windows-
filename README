@@ -1,0 +1,6 @@
+Option:
+	-t , target, format: IP/slash | IP
+	-s , make your arp cache to static, the option is optional
+Usage :
+	arp-scan -t IP/slash [-s]
+	arp-scan -t IP
