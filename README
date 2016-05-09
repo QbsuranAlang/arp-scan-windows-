@@ -1,5 +1,0 @@
-Option:
-	-t: target, format: [IP/slash] or [IP]
-Usage :
-	arp-scan -t IP/slash
-	arp-scan -t IP
