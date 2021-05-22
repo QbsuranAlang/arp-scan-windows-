@@ -8,14 +8,14 @@ extern "C" {
 #include <stddef.h>
 
 struct vendor_entry {
-    char* prefix;
-    char* vendor;
+	char* prefix;
+	char* vendor;
 };
 
 struct vendor_list {
-    struct vendor_entry* entries;
-    size_t nentries;
-    size_t capacity;
+	struct vendor_entry* entries;
+	size_t nentries;
+	size_t capacity;
 };
 
 void vendor_list_init(struct vendor_list* list, const char* vendorfile_path);
