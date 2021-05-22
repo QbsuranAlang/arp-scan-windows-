@@ -3,9 +3,12 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "getopt.h"
+#include "vendor.h"
 //link to librarys
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "iphlpapi.lib")
+
+struct vendor_list vendlist;
 
 static void usage(char *cmd) {
 	fprintf(stderr, "Usage: %s -t [IP/slash] or [IP]\n", cmd);
@@ -51,35 +54,27 @@ static DWORD WINAPI sendAnARP(LPVOID lpArg) {
 	ULONG PhysAddrLen = 6;  /* default to length of six bytes */
 	BYTE *bPhysAddr;
 	DWORD dwRetVal;
-	//get reply time
-	LARGE_INTEGER response_timer1;
-	LARGE_INTEGER response_timer2;
-	LARGE_INTEGER cpu_frequency;
-	double response_time;
 
 	memset(&MacAddr, 0xff, sizeof(MacAddr));
 	PhysAddrLen = 6;
 
 	SetThreadAffinityMask(GetCurrentThread(), 1);
-	QueryPerformanceFrequency((LARGE_INTEGER *)&cpu_frequency);
 
-	//sned arp and wait for reply
-	QueryPerformanceCounter((LARGE_INTEGER *)&response_timer1);
+	// send arp request
 	dwRetVal = SendARP(DestIp, SrcIp, &MacAddr, &PhysAddrLen);
-	QueryPerformanceCounter((LARGE_INTEGER *)&response_timer2);
-
-	response_time = ((double)((response_timer2.QuadPart - response_timer1.QuadPart) * (double) 1000.0 / (double)cpu_frequency.QuadPart));
 
 	//output
 	bPhysAddr = (BYTE *)& MacAddr;
 
 	if (PhysAddrLen) {
 		char message[256];
+		char macaddr[256];
 		int i;
 		memset(message, 0, sizeof(message));
-		sprintf(message, "Reply that ");
+		memset(macaddr, 0, sizeof(macaddr));
 
 		for (i = 0; i < (int)PhysAddrLen; i++) {
+			sprintf(macaddr, "%s%.2X", macaddr, ((int) bPhysAddr[i]));
 			if (i == (PhysAddrLen - 1))
 				sprintf(message, "%s%.2X", message, (int)bPhysAddr[i]);
 			else
@@ -88,8 +83,7 @@ static DWORD WINAPI sendAnARP(LPVOID lpArg) {
 
 		struct in_addr ip_addr;
 		ip_addr.s_addr = DestIp;
-		sprintf(message, "%s is %s in %f", message, inet_ntoa(ip_addr), response_time);
-		printf("%s\n", message);
+		printf("%s\t%s\t%s\n", inet_ntoa(ip_addr), message, vendor_list_lookup(&vendlist, macaddr));
 	}//end if
 	return 0;
 }//end sendAnARP
@@ -131,6 +125,7 @@ int main(int argc, char *argv[]) {
 	HANDLE *hHandles;
 	DWORD ThreadId;
 	u_long i = 0;
+	char* vendorfile_path;
 
 	while ((c = getopt(argc, argv, "t:")) != EOF) {
 		switch (c) {
@@ -173,6 +168,12 @@ int main(int argc, char *argv[]) {
 	//set control-c handler
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)&controlc, TRUE);
 
+	for (i = strlen(argv[0]) - 1; argv[0][i] != '\\' && argv[0][i] != '/'; --i);
+	vendorfile_path = calloc(i + sizeof("mac-vendor.txt") + 1, 1);
+	memcpy(vendorfile_path, argv[0], i);
+	strcat(vendorfile_path, "\\mac-vendor.txt");
+	vendor_list_init(&vendlist, vendorfile_path);
+
 	loopcount = 1 << (32 - slash);
 	hHandles = (HANDLE *)malloc(sizeof(HANDLE) * loopcount);
 
@@ -197,6 +198,7 @@ int main(int argc, char *argv[]) {
 		WaitForSingleObject(hHandles[i], INFINITE);
 	}//end for
 
+	vendor_list_free(&vendlist);
 	WSACleanup();
 
 	exit(0);
