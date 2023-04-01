@@ -1,5 +1,8 @@
 arp-scan
 ====
+
+[![Security Status](https://s.murphysec.com/badge/QbsuranAlang/arp-scan-windows-.svg)](https://www.murphysec.com/p/QbsuranAlang/arp-scan-windows-)
+
 arp-scan is for windows only, support x86 and x64.
 
 Option
